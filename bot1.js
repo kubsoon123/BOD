@@ -299,4 +299,4 @@ function startAccountsSequentially(accounts, delay=15000){
   next()
 }
 
-startAccountsSequentially(ACCOUNTS,15000)
+startAccountsSequentially(ACCOUNTS,60000)
