@@ -104,11 +104,39 @@ function createBotController(username) {
     }, delay)
   }
 
+  function setupRandomActions() {
+    lookInterval = setInterval(() => {
+      try {
+        const yaw = ((Math.random()*360)-180) * Math.PI/180
+        const pitch = ((Math.random()*40)-20) * Math.PI/180
+        bot.look(yaw, pitch, true).catch(()=>{})
+      } catch(e){}
+    }, 3000 + Math.floor(Math.random()*2000))
+
+    jumpInterval = setInterval(() => {
+      try {
+        bot.setControlState('jump', true)
+        setTimeout(()=>{ try{bot.setControlState('jump', false)}catch(e){} }, 250 + Math.floor(Math.random()*250))
+      } catch(e){}
+    }, 8000 + Math.floor(Math.random()*7000))
+
+    moveInterval = setInterval(() => {
+      try {
+        const moves = ['left','right','forward','back', null, null]
+        const choice = moves[Math.floor(Math.random()*moves.length)]
+        if (choice) {
+          bot.setControlState(choice, true)
+          const duration = 400 + Math.floor(Math.random()*800)
+          setTimeout(()=>{ try{bot.setControlState(choice,false)}catch(e){} }, duration)
+        }
+      } catch(e){}
+    }, 4000 + Math.floor(Math.random()*3000))
+  }
+
   function startBot() {
     resetState()
     bot = mineflayer.createBot(BOT_CONFIG)
 
-    // --- wysyłanie czatu kompatybilne z 1.20.x ---
     function sendChat(botInstance, message) {
       if (!botInstance || !message) return
       if (typeof botInstance.chat === 'function') {
@@ -130,7 +158,6 @@ function createBotController(username) {
       }
     }
 
-    // --- po zalogowaniu ---
     bot.once('login', () => {
       log('[+] Zalogowano – wysyłam /login za 3 s')
       setTimeout(() => {
@@ -138,54 +165,27 @@ function createBotController(username) {
         log('[>] /login')
       }, 3000)
 
+      // natychmiast ruch do przodu po loginie
       setTimeout(() => {
         try { bot.setControlState('forward', true); log('[>] Ruch do przodu') } catch(e){}
       }, 6000)
 
-      // --- losowe ruchy, skoki, obracanie kamery ---
-      lookInterval = setInterval(() => {
-        try {
-          const yaw = ((Math.random()*360)-180) * Math.PI/180
-          const pitch = ((Math.random()*40)-20) * Math.PI/180
-          bot.look(yaw, pitch, true).catch(()=>{})
-        } catch(e){}
-      }, 3000 + Math.floor(Math.random()*2000))
-
-      jumpInterval = setInterval(() => {
-        try {
-          bot.setControlState('jump', true)
-          setTimeout(()=>{ try{bot.setControlState('jump', false)}catch(e){} }, 250 + Math.floor(Math.random()*250))
-        } catch(e){}
-      }, 8000 + Math.floor(Math.random()*7000))
-
-      moveInterval = setInterval(() => {
-        try {
-          const moves = ['left','right','forward','back', null, null]
-          const choice = moves[Math.floor(Math.random()*moves.length)]
-          if (choice) {
-            bot.setControlState(choice, true)
-            const duration = 400 + Math.floor(Math.random()*800)
-            setTimeout(()=>{ try{bot.setControlState(choice,false)}catch(e){} }, duration)
-          }
-        } catch(e){}
-      }, 4000 + Math.floor(Math.random()*3000))
+      setupRandomActions()
 
       verificationTimeout = setTimeout(()=>{
         if(!clickingRight) log('[!] Brak weryfikacji – nie klikam')
       },5000)
     })
 
-    // --- wszystkie wiadomości z czatu ---
     bot.on('message', (message) => {
       const msg = message.toString()
       log(`[CHAT] ${msg}`)
 
-      // Sprawdzanie czy wystąpił błąd blokady IP
       if (msg.includes('Hej! Wykryliśmy podejrzaną aktywność') || 
           msg.includes('Twój adres został chwilowo zablokowany') ||
           msg.includes('podejrzaną aktywność z twojego adresu IP')) {
         log('[🚨] WYKRYTO BLOKADĘ IP - RESTART ZA 5 MINUT')
-        scheduleRestart(300000) // 5 minut
+        scheduleRestart(300000)
         return
       }
 
@@ -262,7 +262,6 @@ function createBotController(username) {
 
     bot.on('kicked',(reason)=>{
       log(`[X] Kicked: ${reason}`)
-      // Sprawdzanie czy kick był spowodowany blokadą IP
       if (typeof reason === 'string' && (
           reason.includes('Hej! Wykryliśmy podejrzaną aktywność') ||
           reason.includes('Twój adres został chwilowo zablokowany') ||
@@ -285,8 +284,8 @@ function createBotController(username) {
   startBot()
 }
 
-// ► Uruchamianie kont po kolei co 15 sekund
-function startAccountsSequentially(accounts, delay=15000){
+// ► Uruchamianie kont po kolei co 1 minutę
+function startAccountsSequentially(accounts, delay=60000){
   let index=0
   function next(){
     if(index>=accounts.length) return
