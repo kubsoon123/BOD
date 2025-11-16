@@ -30,6 +30,7 @@ function createBotController(username) {
   let guiHandled = false
   let payInterval = null
   let moveInterval = null
+  let guiTimeout = null
   let lookInterval = null
   let jumpInterval = null
   let restartTimeout = null
