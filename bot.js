@@ -2,7 +2,8 @@ const mineflayer = require('mineflayer')
 
 // ► Lista kont do uruchomienia
 const ACCOUNTS = [
-  'GorocaPiper133']
+  'GorocaPiper133'
+]
 
 const BASE_CONFIG = {
   host: 'anarchia.gg',
@@ -17,7 +18,6 @@ function createBotController(username) {
   let clickingRight = false
   let clickInterval = null
   let verificationTimeout = null
-  let guiTimeout = null
   let guiHandled = false
   let payInterval = null
   let moveInterval = null
@@ -26,7 +26,7 @@ function createBotController(username) {
   let restartTimeout = null
   let isRestarting = false
 
-  const log = (msg) => console.log(`[${username}] ${msg}`)
+  const log = (msg) => console.log(`[${username}] ${msg}`) // tylko krytyczne logi
 
   function resetState() {
     clickingRight = false
@@ -49,46 +49,26 @@ function createBotController(username) {
       clearInterval(clickInterval)
       try { bot.deactivateItem() } catch (e) {}
       clickingRight = false
-      log('[!] Zatrzymano klikanie prawym')
     }
 
     try { bot.clearControlStates() } catch (e) {}
-    log('[!] Zatrzymano ruch')
 
     if (verificationTimeout) {
       clearTimeout(verificationTimeout)
       verificationTimeout = null
-      log('[!] Anulowano timeout weryfikacji')
     }
-
-    if (guiTimeout) {
-      clearTimeout(guiTimeout)
-      guiTimeout = null
-    }
-
-    if (moveInterval) { clearInterval(moveInterval); moveInterval = null }
-    if (lookInterval) { clearInterval(lookInterval); lookInterval = null }
-    if (jumpInterval) { clearInterval(jumpInterval); jumpInterval = null }
   }
 
-  function scheduleRestart(delay = 300000) { // 5 minut domyślnie
+  function scheduleRestart(delay = 300000) { // 5 minut
     if (isRestarting) return
-    
     isRestarting = true
-    const minutes = delay / 60000
-    log(`[🔄] Zaplanowano restart za ${minutes} minut`)
-    
+
     stopAllActions()
-    
     if (bot) {
-      try {
-        bot.quit()
-        log('[!] Rozłączono bota przed restartem')
-      } catch (e) {}
+      try { bot.quit() } catch (e) {}
     }
 
     restartTimeout = setTimeout(() => {
-      log('[🔄] Uruchamiam bota ponownie...')
       resetState()
       startBot()
     }, delay)
@@ -129,122 +109,54 @@ function createBotController(username) {
 
     function sendChat(botInstance, message) {
       if (!botInstance || !message) return
-      if (typeof botInstance.chat === 'function') {
-        try { botInstance.chat(message); return } catch(e){}
-      }
-      const command = message.startsWith('/') ? message.slice(1) : message
-      try {
-        botInstance._client.write('chat_command', {
-          command,
-          timestamp: BigInt(Date.now()),
-          salt: 0n,
-          argumentSignatures: [],
-          signedPreview: false,
-          previousMessages: [],
-          lastSeenMessages: { offset: 0, acknowledged: [] }
-        })
-      } catch (err) {
-        console.error(`[${username}] [sendChat] Błąd wysyłania czatu:`, err && err.message ? err.message : err)
-      }
+      try { botInstance.chat(message) } catch(e){}
     }
 
     bot.once('login', () => {
-      log('[+] Zalogowano – wysyłam /login za 3 s')
-      setTimeout(() => {
-        sendChat(bot, '/login Haslo123!')
-        log('[>] /login')
-      }, 3000)
-
-      // natychmiast ruch do przodu po loginie
-      setTimeout(() => {
-        try { bot.setControlState('forward', true); log('[>] Ruch do przodu') } catch(e){}
-      }, 6000)
-
-      setupRandomActions()
-
+      setTimeout(() => sendChat(bot,'/login Haslo123!'), 3000)
       verificationTimeout = setTimeout(()=>{
         if(!clickingRight) log('[!] Brak weryfikacji – nie klikam')
       },5000)
+      setupRandomActions()
     })
 
     bot.on('message', (message) => {
       const msg = message.toString()
-      log(`[CHAT] ${msg}`)
 
+      // blokady IP
       if (msg.includes('Hej! Wykryliśmy podejrzaną aktywność') || 
           msg.includes('Twój adres został chwilowo zablokowany') ||
           msg.includes('podejrzaną aktywność z twojego adresu IP')) {
         log('[🚨] WYKRYTO BLOKADĘ IP - RESTART ZA 5 MINUT')
         scheduleRestart(300000)
-        return
       }
 
       if (msg.includes('Twoje konto zostało zweryfikowane!') && !clickingRight) {
         clearTimeout(verificationTimeout)
         verificationTimeout = null
-        log('[✓] Zweryfikowano – start klikania prawym')
-
         clickingRight = true
+
         clickInterval = setInterval(() => {
           try { bot.activateItem(); setTimeout(()=>{ try{bot.deactivateItem()}catch(e){} },100) } catch(e){}
         },1000)
-
-        guiTimeout = setTimeout(()=>{
-          if(clickingRight){
-            log('[!] Nie otwarto GUI w 10 sek – zatrzymuję klikanie')
-            clearInterval(clickInterval)
-            clickingRight=false
-          }
-        },10000)
-      }
-
-      if (msg.includes('Znajdujesz się w strefie ciszy')) {
-        log('[X] Strefa ciszy – quit')
-        stopAllActions()
-        try{ bot.quit() } catch(e){}
       }
     })
 
     bot.on('windowOpen', async () => {
       if(guiHandled) return
-      guiHandled=true
+      guiHandled = true
 
-      if(clickingRight){ clearInterval(clickInterval); clickingRight=false; log('[✓] GUI otwarte – zatrzymano klikanie') }
+      if(clickingRight){ clearInterval(clickInterval); clickingRight=false }
 
-      log('[*] GUI otwarte – klikam slot 2')
-      stopAllActions()
-
-      setTimeout(async ()=>{
-        try{
-          await bot.clickWindow(2,0,0)
-          log('[✓] Slot 2 OK')
-
-          setTimeout(()=>{
-            sendChat(bot,'/afk')
-            log('[>] /afk')
-
-            setTimeout(async ()=>{
-              try{
-                await bot.clickWindow(11,0,0)
-                log('[✓] Slot 11 OK')
-                sendChat(bot,'/pay GorocaPiper133 200')
-                log('[>] /pay 200')
-
-                payInterval = setInterval(()=>{
-                  sendChat(bot,'/pay GorocaPiper133 200')
-                  log('[>] Auto-/pay 200')
-                },30000)
-              } catch(err){ log(`[X] Błąd slot 11: ${err && err.message?err.message:err}`) }
-            },2000)
-          },10000)
-        } catch(err){ log(`[X] Błąd slot 2: ${err && err.message?err.message:err}`) }
-      },2000)
+      try {
+        await bot.clickWindow(2,0,0)
+        log('[✓] Slot 2 OK')
+      } catch(err){ log(`[X] Błąd slot 2: ${err.message}`) }
     })
 
     bot.on('error',(err)=>{
-      log(`[X] Error: ${err && err.message?err.message:err}`)
-      if(err && err.message && err.message.includes('Timed out')){
-        log('[!] Timeout – ponawiam po 10 sekundach')
+      log(`[X] Error: ${err.message}`)
+      if(err.message.includes('Timed out')){
         resetState()
         setTimeout(startBot,10000)
       }
@@ -257,14 +169,13 @@ function createBotController(username) {
           reason.includes('Twój adres został chwilowo zablokowany') ||
           reason.includes('podejrzaną aktywność z twojego adresu IP')
       )) {
-        log('[🚨] WYKRYTO BLOKADĘ IP PRZY KICKU - RESTART ZA 5 MINUT')
         scheduleRestart(300000)
       }
     })
 
     bot.on('end',()=>{
       if (!isRestarting) {
-        log('[!] Rozłączono – reconnect za 10 s')
+        log('[!] Bot rozłączony – reconnect za 10 s')
         resetState()
         setTimeout(startBot, 10000)
       }
