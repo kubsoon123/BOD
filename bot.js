@@ -23,6 +23,7 @@ function createBotController(username) {
   let moveInterval = null
   let lookInterval = null
   let jumpInterval = null
+  let guiTimeout = null
   let restartTimeout = null
   let isRestarting = false
 
