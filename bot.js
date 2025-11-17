@@ -108,6 +108,14 @@ function createBotController(username) {
     resetState()
     bot = mineflayer.createBot(BOT_CONFIG)
 
+    // === ANTI-TIMEOUT FIX (najważniejsze) ===
+    bot._client.socket.setTimeout(0) // wyłącza 30-sekundowy limit
+    setInterval(() => {
+      try {
+        bot._client.write('keep_alive', { keepAliveId: Date.now() }) // serwer widzi że żyje
+      } catch {}
+    }, 5000)
+
     function sendChat(botInstance, message) {
       if (!botInstance || !message) return
       try { botInstance.chat(message) } catch(e){}
