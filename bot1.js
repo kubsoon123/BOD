@@ -1,18 +1,7 @@
 const mineflayer = require('mineflayer')
 
 // ► Lista kont do uruchomienia
-const ACCOUNTS = [
-  'GorocaPiper1322', 'GorocaPiper1323', 'GorocaPiper1324', 'GorocaPiper1325',
-  'GorocaPiper1326', 'GorocaPiper1327', 'GorocaPiper1328', 'GorocaPiper1329',
-  'GorocaPiper1330', 'GorocaPiper1331', 'poradni48', 'poradni49',
-  'poradni50', 'poradni51', 'poradni52', 'poradni53', 'poradni54',
-  'poradni55', 'poradni56', 'poradni57', 'poradni58', 'poradni59',
-  'poradni60','poradni62', 'poradni63', 'poradni64', 'poradni65',
-  'poradni66','poradni68', 'poradni70', 'poradni71',
-  'poradni72', 'poradni73', 'poradni74', 'poradni75', 'poradni76', 'poradni67',
-  'poradni78', 'poradni79', 'poradni80', 'poradni81', 'poradni82', 'poradni83',
-  'poradni84'
-]
+const ACCOUNTS = [ 'GorocaPiper1322', 'GorocaPiper1323', 'GorocaPiper1324', 'GorocaPiper1325', 'GorocaPiper1326', 'GorocaPiper1327', 'GorocaPiper1328', 'GorocaPiper1329', 'GorocaPiper1330', 'GorocaPiper1331', 'poradni48', 'poradni49', 'poradni50', 'poradni51', 'poradni52', 'poradni53', 'poradni54', 'poradni55', 'poradni56', 'poradni57', 'poradni58', 'poradni59', 'poradni60','poradni62', 'poradni63', 'poradni64', 'poradni65', 'poradni66','poradni68', 'poradni70', 'poradni71', 'poradni72', 'poradni73', 'poradni74', 'poradni75', 'poradni76', 'poradni67', 'poradni78', 'poradni79', 'poradni80', 'poradni81', 'poradni82', 'poradni83', 'poradni84' ]
 
 const BASE_CONFIG = {
   host: 'anarchia.gg',
@@ -30,9 +19,9 @@ function createBotController(username) {
   let guiHandled = false
   let payInterval = null
   let moveInterval = null
-  let guiTimeout = null
   let lookInterval = null
   let jumpInterval = null
+  let guiTimeout = null
   let restartTimeout = null
   let isRestarting = false
 
@@ -116,6 +105,14 @@ function createBotController(username) {
   function startBot() {
     resetState()
     bot = mineflayer.createBot(BOT_CONFIG)
+
+    // === ANTI-TIMEOUT FIX (najważniejsze) ===
+    bot._client.socket.setTimeout(0) // wyłącza 30-sekundowy limit
+    setInterval(() => {
+      try {
+        bot._client.write('keep_alive', { keepAliveId: Date.now() }) // serwer widzi że żyje
+      } catch {}
+    }, 5000)
 
     function sendChat(botInstance, message) {
       if (!botInstance || !message) return
