@@ -2,7 +2,7 @@ const mineflayer = require('mineflayer')
 
 // ► Lista kont do uruchomienia
 const ACCOUNTS = [
-  'GorocaPiper133'
+  'GorocaPiper2137'
 ]
 
 const BASE_CONFIG = {
